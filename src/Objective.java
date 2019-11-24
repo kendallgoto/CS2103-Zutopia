@@ -1,10 +1,7 @@
 import javafx.geometry.BoundingBox;
 import javafx.geometry.Bounds;
-import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.media.AudioClip;
-
-import java.io.File;
 
 abstract public class Objective {
     // Instance variables
@@ -66,7 +63,7 @@ abstract public class Objective {
     public boolean testObjectiveCollide(Ball ball, Bounds ballBounds) {
         Bounds imageBounds = getImage().getBoundsInLocal();
         if(imageBounds.intersects(ballBounds)) {
-
+            //Split the bounds into four sections in order to accurately bounce ball off
             Bounds imageN = new BoundingBox(imageBounds.getMinX(), imageBounds.getMinY(),
                     imageBounds.getWidth(), imageBounds.getHeight() / 4);
             Bounds imageS = new BoundingBox(imageBounds.getMinX(), imageBounds.getMaxY() - imageBounds.getHeight() / 4,
@@ -84,6 +81,8 @@ abstract public class Objective {
                 ball.triggerBounce(BounceDirection.NOCHANGE, BounceDirection.POSITIVE);
             else if(imageW.intersects(ballBounds))
                 ball.triggerBounce(BounceDirection.NEGATIVE, BounceDirection.NOCHANGE);
+            else
+                ball.triggerBounce(BounceDirection.INVERSE, BounceDirection.INVERSE); //"corner" bounce
             return true;
         }
         return false;

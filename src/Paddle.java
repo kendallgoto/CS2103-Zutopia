@@ -1,4 +1,3 @@
-import java.awt.*;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
 
@@ -45,8 +44,8 @@ class Paddle {
 		bottomRectangle = new Rectangle(0, PADDLE_HEIGHT/2, PADDLE_WIDTH, PADDLE_HEIGHT/2);
 		bottomRectangle.setLayoutX(x-PADDLE_WIDTH/2);
 		bottomRectangle.setLayoutY(y-PADDLE_HEIGHT/2);
-		bottomRectangle.setStroke(Color.RED);
-		bottomRectangle.setFill(Color.RED);
+		bottomRectangle.setStroke(Color.GREEN);
+		bottomRectangle.setFill(Color.GREEN);
 	}
 
 	/**

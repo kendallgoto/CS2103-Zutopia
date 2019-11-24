@@ -79,23 +79,24 @@ public class Ball {
 
 	/**
 	 * Given a velocity and bounce direction, apply the bounce to the velocity and return it
-	 * @param delta initial velocity
+	 * @param initial initial velocity
 	 * @param modifier bounce direction
 	 * @return result of applying bounce direction
 	 */
-	public double applyBounceDirection(double delta, BounceDirection modifier) {
-		double abs_delta = Math.abs(delta);
+	public double applyBounceDirection(double initial, BounceDirection modifier) {
+		double abs_initial = Math.abs(initial);
 		switch(modifier) {
 			case NEGATIVE:
-				return abs_delta * -1;
+				return abs_initial * -1;
 			case NOCHANGE:
-				return delta;
+				return initial;
 			case POSITIVE:
-				return abs_delta;
+				return abs_initial;
 			case INVERSE:
-				return delta * -1;
+				return initial * -1;
+			default:
+				throw new IllegalArgumentException("Invalid BounceDirection");
 		}
-		return 0; //should never run with valid input
 	}
 
 	/**

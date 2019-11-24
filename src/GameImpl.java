@@ -1,4 +1,3 @@
-import javafx.geometry.BoundingBox;
 import javafx.geometry.Bounds;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.*;
@@ -113,17 +112,14 @@ public class GameImpl extends Pane implements Game {
 		startLabel.setLayoutY(HEIGHT / 2 + 100);
 		getChildren().add(startLabel);
 
-		// Add event handler to start the game
 		setOnMouseClicked(e -> {
 			if(state != GameState.ACTIVE) {
-				GameImpl.this.setOnMouseClicked(null);
+				GameImpl.this.setOnMouseClicked(null); // stop listening for click
 				// As soon as the mouse is clicked, remove the startLabel from the game board
 				getChildren().remove(startLabel);
 				run();
 			}
 		});
-
-		// Add another event handler to steer paddle...
 		setOnMouseMoved(e -> paddle.moveTo(e.getX(), e.getY()));
 	}
 
@@ -162,6 +158,7 @@ public class GameImpl extends Pane implements Game {
 		Bounds ballParent = ball.getCircle().getBoundsInParent();
 		Bounds ballScene = this.localToScene(ballParent);
 
+		//detect bounce on top of paddle vs bottom of paddle
 		Bounds sceneBounds_top = paddle.getTopRectangle().sceneToLocal(ballScene);
 		Bounds sceneBounds_bottom = paddle.getBottomRectangle().sceneToLocal(ballScene);
 		if(paddle.getTopRectangle().intersects(sceneBounds_top)) {
@@ -170,7 +167,7 @@ public class GameImpl extends Pane implements Game {
 			ball.triggerBounce(BounceDirection.NOCHANGE, BounceDirection.POSITIVE);
 		}
 
-		//test collision with target obj
+		//test collision with each objective
 		Iterator<Objective> iterator = targets.iterator();
 		while(iterator.hasNext()) {
 			Objective t = iterator.next();
@@ -180,7 +177,7 @@ public class GameImpl extends Pane implements Game {
 				t.teleport();
 				getChildren().remove(image);
 				iterator.remove();
-				ball.increaseSpeed(1.05, 1.05);
+				ball.increaseSpeed(1.1, 1.1);
 			}
 		}
 		if(targets.size() <= 0) {
@@ -205,7 +202,6 @@ public class GameImpl extends Pane implements Game {
 				return GameState.LOST;
 			}
 		}
-
 		return GameState.ACTIVE;
 	}
 
@@ -216,9 +212,11 @@ public class GameImpl extends Pane implements Game {
 	 * @param rng A random number generator to produce a new random objective with.
 	 */
 	private void generateObjective(int x, int y, Random rng) {
+		//Get a random objective class from our class list, possibleTargets
 		Class<? extends Objective> randomObjective = possibleTargets.get(rng.nextInt(possibleTargets.size()));
 		try {
-			Objective random = (Objective)randomObjective.getConstructors()[0].newInstance(x, y);
+			//Given a random class, get its first constructor + construct it with (x, y) initial
+			Objective random = (Objective) randomObjective.getConstructors()[0].newInstance(x, y);
 			targets.add(random);
 			getChildren().add(random.getImage());
 		}
