@@ -1,8 +1,11 @@
+import javafx.geometry.BoundingBox;
+import javafx.geometry.Bounds;
+import javafx.scene.image.ImageView;
 import javafx.scene.layout.*;
 import javafx.scene.control.Label;
 import javafx.animation.AnimationTimer;
-import javafx.scene.input.MouseEvent;
-import javafx.event.*;
+import javafx.scene.media.AudioClip;
+
 import java.util.*;
 
 public class GameImpl extends Pane implements Game {
@@ -23,27 +26,53 @@ public class GameImpl extends Pane implements Game {
 	 */
 	public static final int HEIGHT = 600;
 
+	/**
+	 * Max number of lives at start of game.
+	 */
+	public static final int MAX_LIVES = 5;
+
 	// Instance variables
 	private Ball ball;
 	private Paddle paddle;
+	final private ArrayList<Objective> targets = new ArrayList<>(16);
+
+	final private ArrayList<Class<? extends Objective>> possibleTargets = new ArrayList<>();
+	private int lives = MAX_LIVES;
+	final private AudioClip loseSound = new AudioClip(getClass().getClassLoader().getResource("shatter.wav").toString());
+	final private AudioClip winSound = new AudioClip(getClass().getClassLoader().getResource("chaching.wav").toString());
 
 	/**
 	 * Constructs a new GameImpl.
 	 */
 	public GameImpl () {
 		setStyle("-fx-background-color: white;");
+		possibleTargets.add(DuckObjective.class);
+		possibleTargets.add(HorseObjective.class);
+		possibleTargets.add(GoatObjective.class);
 
 		restartGame(GameState.NEW);
 	}
 
+	/**
+	 * Returns the name of the window
+	 * @return window name
+	 */
 	public String getName () {
 		return "Zutopia";
 	}
 
+	/**
+	 * Returns this pane
+	 * @return this pane
+	 */
 	public Pane getPane () {
 		return this;
 	}
 
+	/**
+	 * Begins / Restarts the game board, customizing the on-screen label based on state
+	 * @param state Current Game State label
+	 */
 	private void restartGame (GameState state) {
 		getChildren().clear();  // remove all components from the game
 
@@ -52,10 +81,23 @@ public class GameImpl extends Pane implements Game {
 		getChildren().add(ball.getCircle());  // Add the ball to the game board
 
 		// Create and add animals ...
+		targets.clear();
+		Random rng = new Random();
+		//for loops divided for clarity: this is our 4x4 grid of animals
+		for(int y = 0; y < 4; y++) {
+			int yPlacement = (y * 60) + 30;
+			for(int x = 0; x < 4; x++) {
+				int xPlacement = (x * (WIDTH / 4)) + 30; //automatically split x placement across width of screen
+				generateObjective(xPlacement, yPlacement, rng);
+			}
+		}
 
 		// Create and add paddle
 		paddle = new Paddle();
-		getChildren().add(paddle.getRectangle());  // Add the paddle to the game board
+		getChildren().add(paddle.getTopRectangle());  // Add the paddle to the game board
+		getChildren().add(paddle.getBottomRectangle());
+
+		lives = MAX_LIVES; //reset lives to max
 
 		// Add start message
 		final String message;
@@ -72,11 +114,9 @@ public class GameImpl extends Pane implements Game {
 		getChildren().add(startLabel);
 
 		// Add event handler to start the game
-		setOnMouseClicked(new EventHandler<MouseEvent> () {
-			@Override
-			public void handle (MouseEvent e) {
+		setOnMouseClicked(e -> {
+			if(state != GameState.ACTIVE) {
 				GameImpl.this.setOnMouseClicked(null);
-
 				// As soon as the mouse is clicked, remove the startLabel from the game board
 				getChildren().remove(startLabel);
 				run();
@@ -84,6 +124,7 @@ public class GameImpl extends Pane implements Game {
 		});
 
 		// Add another event handler to steer paddle...
+		setOnMouseMoved(e -> paddle.moveTo(e.getX(), e.getY()));
 	}
 
 	/**
@@ -118,6 +159,71 @@ public class GameImpl extends Pane implements Game {
 	 */
 	public GameState runOneTimestep (long deltaNanoTime) {
 		ball.updatePosition(deltaNanoTime);
+		Bounds ballParent = ball.getCircle().getBoundsInParent();
+		Bounds ballScene = this.localToScene(ballParent);
+
+		Bounds sceneBounds_top = paddle.getTopRectangle().sceneToLocal(ballScene);
+		Bounds sceneBounds_bottom = paddle.getBottomRectangle().sceneToLocal(ballScene);
+		if(paddle.getTopRectangle().intersects(sceneBounds_top)) {
+			ball.triggerBounce(BounceDirection.NOCHANGE, BounceDirection.NEGATIVE);
+		} else if(paddle.getBottomRectangle().intersects(sceneBounds_bottom)) {
+			ball.triggerBounce(BounceDirection.NOCHANGE, BounceDirection.POSITIVE);
+		}
+
+		//test collision with target obj
+		Iterator<Objective> iterator = targets.iterator();
+		while(iterator.hasNext()) {
+			Objective t = iterator.next();
+			ImageView image = t.getImage();
+			Bounds sceneBounds = image.sceneToLocal(ballScene);
+			if(t.testObjectiveCollide(ball, sceneBounds)) {
+				t.teleport();
+				getChildren().remove(image);
+				iterator.remove();
+				ball.increaseSpeed(1.05, 1.05);
+			}
+		}
+		if(targets.size() <= 0) {
+			winSound.play();
+			return GameState.WON;
+		}
+
+		//test screen boundaries...
+		Bounds sceneBoundaries = this.getLayoutBounds();
+		if(ballScene.getMinX() <= sceneBoundaries.getMinX()) //L Wall
+			ball.triggerBounce(BounceDirection.POSITIVE, BounceDirection.NOCHANGE);
+		else if(ballScene.getMaxX() >= sceneBoundaries.getMaxX()) // R Wall
+			ball.triggerBounce(BounceDirection.NEGATIVE, BounceDirection.NOCHANGE);
+		else if(ballScene.getMinY() <= sceneBoundaries.getMinY()) // Top Wall
+			ball.triggerBounce(BounceDirection.NOCHANGE, BounceDirection.POSITIVE);
+		else if(ballScene.getMaxY() >= sceneBoundaries.getMaxY()) { // Bottom Wall
+			ball.triggerBounce(BounceDirection.NOCHANGE, BounceDirection.NEGATIVE);
+			//check lives
+			lives--;
+			if(lives <= 0) {
+				loseSound.play();
+				return GameState.LOST;
+			}
+		}
+
 		return GameState.ACTIVE;
 	}
+
+	/**
+	 * Creates a random objective subclass with top corner at (x, y), given a random number generator
+	 * @param x Top left corner X position
+	 * @param y Top right corner Y position
+	 * @param rng A random number generator to produce a new random objective with.
+	 */
+	private void generateObjective(int x, int y, Random rng) {
+		Class<? extends Objective> randomObjective = possibleTargets.get(rng.nextInt(possibleTargets.size()));
+		try {
+			Objective random = (Objective)randomObjective.getConstructors()[0].newInstance(x, y);
+			targets.add(random);
+			getChildren().add(random.getImage());
+		}
+		catch(Exception e) { // will never throw exception
+		}
+	}
+
 }

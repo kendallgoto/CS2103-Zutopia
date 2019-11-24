@@ -26,21 +26,8 @@ class Paddle {
 	public static final double MAX_Y_LOCATION_FRAC = 0.9;
 
 	// Instance variables
-	private Rectangle rectangle;
-
-	/**
-	 * @return the x coordinate of the center of the paddle.
-	 */
-	public double getX () {
-		return rectangle.getLayoutX() + rectangle.getTranslateX() + PADDLE_WIDTH/2;
-	}
-
-	/**
-	 * @return the y coordinate of the center of the paddle.
-	 */
-	public double getY () {
-		return rectangle.getLayoutY() + rectangle.getTranslateY() + PADDLE_HEIGHT/2;
-	}
+	private Rectangle topRectangle;
+	private Rectangle bottomRectangle;
 
 	/**
 	 * Constructs a new Paddle whose vertical center is at INITIAL_Y_LOCATION_FRAC * GameImpl.HEIGHT.
@@ -49,18 +36,31 @@ class Paddle {
 		final double x = PADDLE_WIDTH/2;
 		final double y = INITIAL_Y_LOCATION_FRAC * GameImpl.HEIGHT;
 
-		rectangle = new Rectangle(0, 0, PADDLE_WIDTH, PADDLE_HEIGHT);
-		rectangle.setLayoutX(x-PADDLE_WIDTH/2);
-		rectangle.setLayoutY(y-PADDLE_HEIGHT/2);
-		rectangle.setStroke(Color.GREEN);
-		rectangle.setFill(Color.GREEN);
+		topRectangle = new Rectangle(0, 0, PADDLE_WIDTH, PADDLE_HEIGHT/2);
+		topRectangle.setLayoutX(x-PADDLE_WIDTH/2);
+		topRectangle.setLayoutY(y-PADDLE_HEIGHT/2);
+		topRectangle.setStroke(Color.GREEN);
+		topRectangle.setFill(Color.GREEN);
+		//We split the paddle into a top rectangle and bottom rectangle for bouncing off top/bottom.
+		bottomRectangle = new Rectangle(0, PADDLE_HEIGHT/2, PADDLE_WIDTH, PADDLE_HEIGHT/2);
+		bottomRectangle.setLayoutX(x-PADDLE_WIDTH/2);
+		bottomRectangle.setLayoutY(y-PADDLE_HEIGHT/2);
+		bottomRectangle.setStroke(Color.RED);
+		bottomRectangle.setFill(Color.RED);
 	}
 
 	/**
-	 * @return the Rectangle object that represents the paddle on the game board.
+	 * @return the Rectangle object that represents the top of the paddle on the game board.
 	 */
-	public Rectangle getRectangle () {
-		return rectangle;
+	public Rectangle getTopRectangle () {
+		return topRectangle;
+	}
+
+	/**
+	 * @return the Rectangle object that represents the top of the paddle on the game board.
+	 */
+	public Rectangle getBottomRectangle () {
+		return bottomRectangle;
 	}
 
 	/**
@@ -84,7 +84,9 @@ class Paddle {
 			newY = MAX_Y_LOCATION_FRAC * GameImpl.HEIGHT;
 		}
 
-		rectangle.setTranslateX(newX - (rectangle.getLayoutX() + PADDLE_WIDTH/2));
-		rectangle.setTranslateY(newY - (rectangle.getLayoutY() + PADDLE_HEIGHT/2));
+		topRectangle.setTranslateX(newX - (topRectangle.getLayoutX() + PADDLE_WIDTH/2));
+		topRectangle.setTranslateY(newY - (topRectangle.getLayoutY() + PADDLE_HEIGHT/2));
+		bottomRectangle.setTranslateX(newX - (bottomRectangle.getLayoutX() + PADDLE_WIDTH/2));
+		bottomRectangle.setTranslateY(newY - (bottomRectangle.getLayoutY() + PADDLE_HEIGHT/2));
 	}
 }
